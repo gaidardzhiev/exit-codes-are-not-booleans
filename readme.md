@@ -10,13 +10,13 @@ The `case` construct performs none of this. It receives a word, the already expa
 
 This paper argues that the choice between `if` and `case` is not stylistic but semantic. The two constructs have different execution models and are not interchangeable. When the condition is a command outcome, `if` is correct and irreplaceable. When the condition is a value, `case` is the right primitive, and reaching for `if [ ]` is a category error: a command evaluator applied to a value dispatch problem.
 
-The author ran the following against his own projects before publishing:
+The author performed a ritual inventory of his own sins, running the following audit against his projects before publishing:
 
 ```sh
 grep -rE --include="*.sh" 'if \[|&&\s*\[|\|\|\s*\[' . | wc -l
 ```
 
-The result was 2728...
+The result was 2728. If there is absolution here, it is earned only through exposure, and an embarrassed, stubborn commitment to fix what I so confidently decried. Consider this your warning, my mea culpa, and my invitation: scrutinize loudly, refactor mercilessly.
 
 ## Files
 
