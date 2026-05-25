@@ -22,7 +22,17 @@ The result was 2728. If there is absolution here, it is earned only through expo
 
 - `exit_codes_are_not_booleans.pdf` the paper
 - `exit_codes_are_not_booleans.tex` latex source
+- `compare.sh` a POSIX shell benchmark written in 2025, a year before the paper it corroborates
+- `tex2pdf.sh` an interactive POSIX shell utility that prompts to build the LaTeX source into a PDF using either xelatex or pdflatex, and copies the result to ~/Downloads
+
+## The Benchmark
+
+`compare.sh` was excluded from the paper deliberately. The central argument is semantic, not empirical, and a benchmark cited in its support would have invited the wrong refutation, an optimised implementation, a faster machine, a narrower margin, none of which would touch the structural claim. The script exists because the performance consequence of a category error is still a consequence, and because a reader who finds the theoretical argument unconvincing deserves the opportunity to time it themselves.
+
+Both functions compute `r=$((i % 6))` once per iteration. The arithmetic is identical. The only variable is the dispatch mechanism: `if` routes through `[ ]` and exit codes; `case` dispatches on the value directly.
 
 ## License
-
-CC by 4.0 Ivan Gaydardzhiev, 2026
+ 
+The paper (`exit_codes_are_not_booleans.pdf`, `exit_codes_are_not_booleans.tex`) is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Ivan Gaydardzhiev, 2026.
+ 
+The software in this repository is released under [GPL-3.0-only](./COPYING).

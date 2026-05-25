@@ -1,4 +1,6 @@
 #!/bin/sh
+#Copyright (C) 2026 Ivan Gaydardzhiev
+#Licensed under the GPL-3.0-only
 
 flatex() {
 	printf "do you want to build the LaTeX document form source? (y/n)\n"
