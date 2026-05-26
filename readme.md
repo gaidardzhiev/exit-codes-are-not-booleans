@@ -35,7 +35,7 @@ Both functions compute `r=$((i % 6))` once per iteration. The arithmetic is iden
 
 ## The Empirical Paper
 
-[ecnb_empirical.pdf](./ecnb_empirical.pdf) is a companion to the semantic argument. It measures what the first paper declines to measure: the cost of the round trip, in nanoseconds, across three shell configurations on an ARM Cortex A53 running 32-bit Arch Linux. The result is consistent across every shell tested. `case` outperforms `if`/`[` by factors of 2.33x, 2.35x, and 3.09x. The most significant finding is directional: the faster the shell implementation, the larger the relative overhead. Optimising the shell does not close the gap. It widens it.
+[ecnb_empirical.pdf](./ecnb_empirical.pdf) is a companion to the semantic argument. It measures what the first paper declines to do: the cost of the round trip, in nanoseconds, across three shell configurations on an ARM Cortex A53 running 32-bit Arch Linux. The result is consistent across every shell tested. `case` outperforms `if`/`[` by factors of 2.33x, 2.35x, and 3.09x. The most significant finding is directional: the faster the shell implementation, the larger the relative overhead. Optimising the shell does not close the gap. It widens it.
 
 ## License
 
