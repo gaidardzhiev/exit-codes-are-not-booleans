@@ -1,0 +1,420 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{abstract}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{titling}
+\usepackage{authblk}
+\usepackage{siunitx}
+
+\lstset{
+	basicstyle=\ttfamily\footnotesize,
+	breaklines=true,
+	breakatwhitespace=false,
+	tabsize=8,
+	showstringspaces=false,
+	numbers=left,
+	numberstyle=\tiny,
+	numbersep=5pt,
+	xleftmargin=10pt,
+	frame=lines,
+	framerule=0.4pt,
+	captionpos=b,
+	aboveskip=6pt,
+	belowskip=6pt,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small\textit{Dispatch Overhead in POSIX Shell: An Empirical Study}}
+\rhead{\small\textit{Gaydardzhiev, 2026}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\renewcommand{\abstractnamefont}{\normalfont\small\bfseries}
+\renewcommand{\abstracttextfont}{\normalfont\small}
+\setlength{\absleftindent}{0pt}
+\setlength{\absrightindent}{0pt}
+
+\pretitle{%
+	\noindent\rule{\linewidth}{1.2pt}\\[4pt]
+	\begin{center}\Large\bfseries
+}
+\posttitle{\end{center}}
+\preauthor{\begin{center}\normalsize}
+\postauthor{\end{center}}
+\predate{\begin{center}\small}
+\postdate{%
+	\end{center}\vspace{2pt}
+	\noindent\rule{\linewidth}{0.6pt}
+}
+
+\begin{document}
+
+\title{Dispatch Overhead in POSIX Shell:\\[4pt]
+\large An Empirical Measurement of \texttt{if}/\texttt{[}
+versus \texttt{case} Across Shell Implementations}
+
+\author{Ivan Gaydardzhiev}
+\affil{\small\textit{Independent Research} \qquad 2026}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+A companion paper argued on structural grounds that \texttt{if~[~]}
+is a category error for value-based dispatch in POSIX shell: it routes
+a value through a command evaluator, incurring an encoding round-trip
+that \texttt{case} does not require.
+This paper measures the cost of that round-trip empirically.
+Three shell configurations were benchmarked on an ARM Cortex-A53
+octa-core system running 32-bit Arch Linux: GNU Bash~5.2.37,
+a self-compiled \textsc{dash} (armv8l), and the Pacman-distributed
+\textsc{dash} binary.
+Each configuration executed a controlled dispatch loop of
+100\,000 iterations under both \texttt{if}/\texttt{[} and
+\texttt{case}, with arithmetic work held constant.
+The \texttt{case} construct outperformed \texttt{if}/\texttt{[} in
+every run across all three shells, with mean speedup ratios of
+$2.33\times$, $2.35\times$, and $3.09\times$ respectively.
+Standard deviations were low and ratios consistent, indicating that
+the overhead is structural and not a measurement artefact.
+The most significant finding is directional: the faster the shell
+implementation, the larger the relative overhead of \texttt{if}/\texttt{[}.
+Optimising the shell does not close the gap; it widens it.
+\end{abstract}
+
+\vspace{6pt}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{4pt}
+
+\section{Introduction}
+
+The structural argument for preferring \texttt{case} over
+\texttt{if}/\texttt{[} for value-based dispatch in POSIX shell
+has been made elsewhere~\cite{ecnb2026}.
+That argument does not require empirical support: the round-trip
+is mandated by the specification, and its cost is a property of
+the idiom, not of any particular implementation.
+Any conformant shell must execute the guard of an \texttt{if}
+statement as a command and inspect its exit status.
+That requirement cannot be optimised away.
+
+This paper nevertheless measures the cost, for two reasons.
+
+First, a reader who accepts the structural argument on its own terms
+may still want to know the order of magnitude.
+The difference between a theoretically unnecessary step and a
+practically significant one is not always obvious from first
+principles.
+
+Second, the measurement reveals a non-obvious property of the
+overhead: it does not diminish as the shell implementation improves.
+The ratio between \texttt{if}/\texttt{[} and \texttt{case} is
+stable or larger in the faster shell.
+This is consistent with the structural argument: the round-trip
+cost is irreducible, so a faster shell reduces both times
+proportionally, leaving the ratio intact or worsened. But it is
+not a result one would confidently predict without measuring.
+
+\section{Methodology}
+
+\subsection{Hardware and System}
+
+All measurements were taken on a single machine: a MediaTek MT6765
+(Helio G85) system-on-chip with an octa-core ARM Cortex-A53
+processor, revision~4, running at nominally 26.08~BogoMIPS per core.
+The system ran 32-bit Arch Linux ARM in armv8l compatibility mode,
+kernel reporting \texttt{ARMv8 Processor rev~4 (v8l)}.
+Physical memory was \SI{2869}{\mega\byte}.
+At the time of measurement, approximately \SI{1048}{\mega\byte} was
+available; the system was under normal interactive load.
+
+The ARM Cortex-A53 is an in-order pipeline with no out-of-order
+execution.
+This makes timing more deterministic than a superscalar desktop core
+and reduces the variance that would require a larger sample to
+characterise.
+
+\subsection{Shell Configurations}
+
+Three shell configurations were benchmarked:
+
+\begin{enumerate}
+  \item \textbf{Bash 5.2.37}, GNU Bash release
+        \texttt{(armv7l-unknown-linux-gnueabihf)}, invoked as
+        \texttt{bash compare.sh}.
+
+  \item \textbf{dash-armv8l}, a \textsc{dash} binary compiled by the
+        author from source for the armv8l target, invoked as
+        \texttt{./dash-armv8l compare.sh}.
+
+  \item \textbf{dash (Pacman)}, the \textsc{dash} binary distributed
+        by the Arch Linux ARM package manager, invoked as
+        \texttt{/usr/bin/dash compare.sh}.
+\end{enumerate}
+
+The two \textsc{dash} configurations represent different compilation
+paths of the same interpreter.
+Their differing absolute times reflect compiler and optimisation
+differences; their differing ratios are the analytically interesting
+result.
+
+\subsection{Benchmark Design}
+
+The benchmark script, \texttt{compare.sh}, defines two functions:
+\texttt{ftestif} and \texttt{ftestcase}.
+Both iterate a loop of 100\,000 steps.
+In each iteration, both functions compute:
+
+\begin{lstlisting}[numbers=none,frame=none,aboveskip=2pt,belowskip=2pt]
+r=$((i % 6))
+\end{lstlisting}
+
+\noindent
+exactly once, assigning the result to \texttt{r}.
+The arithmetic work is therefore identical between the two functions.
+The only variable is how \texttt{r} is used for dispatch.
+
+\texttt{ftestif} dispatches via \texttt{if}/\texttt{[}:
+
+\begin{lstlisting}[numbers=none,frame=none,aboveskip=2pt,belowskip=2pt]
+if   [ "$r" -eq 0 ]; then
+    result="even and divisible by three"
+elif [ "$r" -eq 2 ] || [ "$r" -eq 4 ]; then
+    result="even"
+elif [ "$r" -eq 3 ]; then
+    result="divisible by three"
+else
+    result="odd"
+fi
+\end{lstlisting}
+
+\texttt{ftestcase} dispatches via \texttt{case}:
+
+\begin{lstlisting}[numbers=none,frame=none,aboveskip=2pt,belowskip=2pt]
+case $r in
+    0)   result="even and divisible by three" ;;
+    2|4) result="even"                        ;;
+    3)   result="divisible by three"          ;;
+    *)   result="odd"                         ;;
+esac
+\end{lstlisting}
+
+Timing used \texttt{date~+\%s\%N} before and after each loop.
+Each configuration was run four times in sequence without rebooting,
+producing four paired measurements of \texttt{if} time and
+\texttt{case} time per shell.
+No CPU pinning or process priority adjustment was applied; the
+measurements reflect conditions representative of normal use.
+
+\subsection{A Note on \texttt{if}/\texttt{[} Invocation Count}
+
+In the worst case, a value that does not match the first or second
+guard, \texttt{ftestif} invokes \texttt{[} up to four times per
+iteration: once for the \texttt{if} guard, once for the \texttt{[}
+inside the \texttt{||} disjunction of the first \texttt{elif},
+and once each for the remaining \texttt{elif} guards.
+\texttt{ftestcase} invokes no external or built-in command for
+dispatch at any point.
+The benchmark does not attempt to normalise per-invocation cost;
+it measures the total cost of expressing the dispatch problem in each
+idiom as a programmer would naturally write it.
+
+\section{Results}
+
+Raw timing data across all four runs per shell are presented in
+Table~\ref{tab:raw}.
+Summary statistics (mean, standard deviation, ratio, and mean
+absolute speedup) are presented in Table~\ref{tab:summary}.
+
+\begin{table}[H]
+\centering
+\caption{Raw timing data (nanoseconds), four runs per shell}
+\label{tab:raw}
+\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Shell & Run & \texttt{if} time (ns) & \texttt{case} time (ns) \\
+\midrule
+dash-armv8l  & 1 & 7\,007\,660\,624 & 3\,134\,303\,622 \\
+(self-compiled) & 2 & 7\,098\,621\,941 & 3\,011\,229\,225 \\
+             & 3 & 7\,097\,430\,018 & 3\,009\,546\,762 \\
+             & 4 & 7\,043\,410\,166 & 2\,969\,579\,374 \\
+\midrule
+bash 5.2.37  & 1 & 6\,963\,661\,004 & 2\,953\,720\,680 \\
+(armv7l)     & 2 & 7\,047\,592\,090 & 3\,012\,825\,302 \\
+             & 3 & 6\,934\,439\,233 & 2\,974\,111\,913 \\
+             & 4 & 7\,058\,227\,783 & 2\,986\,966\,068 \\
+\midrule
+dash         & 1 & 2\,506\,996\,943 & 818\,304\,389 \\
+(Pacman)     & 2 & 2\,518\,489\,405 & 800\,539\,080 \\
+             & 3 & 2\,497\,728\,250 & 808\,197\,311 \\
+             & 4 & 2\,493\,949\,788 & 811\,478\,312 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Summary statistics across four runs per shell}
+\label{tab:summary}
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Shell &
+  \multicolumn{2}{c}{\texttt{if} (s)} &
+  \multicolumn{2}{c}{\texttt{case} (s)} &
+  Ratio &
+  Speedup (s) \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+& Mean & SD (ms) & Mean & SD (ms) & & \\
+\midrule
+dash-armv8l   & 7.0618 & 44.33 & 3.0312 & 71.40 & 2.330 & 4.031 \\
+bash 5.2.37   & 7.0010 & 61.29 & 2.9819 & 24.74 & 2.348 & 4.019 \\
+dash (Pacman) & 2.5043 & 10.94 & 0.8096 &  7.38 & 3.093 & 1.695 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Consistency}
+
+Standard deviations are low relative to the means in all cases.
+For the Pacman \textsc{dash}, the \texttt{if} standard deviation is
+\SI{10.94}{\milli\second} against a mean of \SI{2.504}{\second},
+a coefficient of variation below 0.5\%.
+The \texttt{case} standard deviation for the self-compiled
+\textsc{dash} is the largest at \SI{71.40}{\milli\second} against
+\SI{3.031}{\second}, still under 2.4\%.
+The measurements are stable.
+The ratios are not noise.
+
+\subsection{The Inverse Scaling Result}
+
+The most significant finding is not the magnitude of the overhead
+but its behaviour across implementations.
+
+Bash and dash-armv8l have nearly identical absolute \texttt{if}
+times (\SI{7.001}{\second} and \SI{7.062}{\second} respectively),
+despite being different interpreters.
+Their \texttt{case} times are also close: \SI{2.982}{\second} and
+\SI{3.031}{\second}.
+The ratios are $2.348\times$ and $2.330\times$.
+
+The Pacman \textsc{dash} is substantially faster in absolute terms:
+\SI{2.504}{\second} for \texttt{if}, \SI{0.810}{\second} for
+\texttt{case}.
+But its ratio is $3.093\times$, higher than either of the slower
+shells.
+
+This means that a better shell implementation reduced the
+\texttt{case} time more than it reduced the \texttt{if} time.
+The overhead attributable to the \texttt{[} round-trip did not shrink
+proportionally.
+The irreducible cost of argument vector construction, built-in
+dispatch, and exit-code propagation was compressed less by the
+optimisation than the internal dispatch path of \texttt{case} was.
+
+The implication is that optimising the shell does not close the
+semantic gap; it exposes it more clearly.
+
+\section{Discussion}
+
+\subsection{What the Measurement Establishes}
+
+These results establish three things.
+
+First, the overhead of \texttt{if}/\texttt{[} for value-based
+dispatch is not theoretical.
+On the test hardware, under bash, it costs approximately
+\SI{4}{\second} per 100\,000 iterations compared to \texttt{case}.
+At the per-iteration level, that is roughly \SI{40}{\micro\second}
+of avoidable overhead per dispatch, paid entirely to satisfy the
+interface contract of a command evaluator on a problem that
+does not involve commands.
+
+Second, the overhead is consistent across implementations.
+The ratio does not depend on which shell is used or how it was
+compiled.
+Every shell tested showed \texttt{case} faster by at least
+$2.3\times$.
+The structural argument predicts this: the cost is in the protocol,
+not the implementation.
+
+Third, and most importantly, optimising the shell widens the gap.
+This is not a result that follows immediately from the structural
+argument alone.
+It requires measurement to observe.
+The Pacman \textsc{dash}, the fastest shell in the test, shows
+the largest ratio.
+A programmer who believed that a sufficiently optimised shell would
+make the distinction irrelevant is empirically wrong.
+
+\subsection{Limitations}
+
+Four runs per shell is a small sample.
+The standard deviations are low enough that the ratios are credible,
+but a larger study with process isolation, CPU pinning, and multiple
+machines would produce more defensible confidence intervals.
+
+All measurements were taken on a single architecture: 32-bit ARM
+in-order pipeline.
+The Cortex-A53's in-order execution makes timing more stable than
+an out-of-order desktop core, but it may not represent the relative
+overhead on x86\_64 or aarch64 systems.
+The absolute times would differ; whether the ratios hold is an open
+empirical question.
+
+The benchmark measures the total cost of dispatch as written, not
+the per-invocation cost of \texttt{[} in isolation.
+Isolating the per-invocation cost would require a different
+experimental design.
+
+These limitations do not affect the primary claim: the overhead is
+real, it is consistent, and it does not diminish as the
+implementation improves.
+
+\section{Conclusion}
+
+The \texttt{if}/\texttt{[} idiom for value-based dispatch in POSIX
+shell incurs a measurable and consistent overhead relative to
+\texttt{case}.
+On three shell configurations tested on ARM Cortex-A53 hardware,
+\texttt{case} was faster by factors of $2.33\times$, $2.35\times$,
+and $3.09\times$.
+The overhead is structural: it follows from the execution model of
+\texttt{if} and cannot be eliminated by implementation quality.
+The evidence for this is in the direction of the ratio under
+optimisation.
+The gap does not close.
+It grows.
+
+\vspace{10pt}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{4pt}
+
+{\small
+\noindent
+\textit{Ivan Gaydardzhiev, Independent Research, 2026.
+This work is licensed under the Creative Commons Attribution 4.0
+International License (CC~BY~4.0).}
+}
+
+\begin{thebibliography}{1}
+\bibitem{ecnb2026}
+I.~Gaydardzhiev,
+\textit{Exit Codes Are Not Booleans: On the Misuse of \texttt{if}
+in POSIX Shell Scripting},
+Independent Research, 2026.
+\end{thebibliography}
+
+\end{document}

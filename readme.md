@@ -20,19 +20,25 @@ The result was 2728. If there is absolution here, it is earned only through expo
 
 ## Files
 
-- `exit_codes_are_not_booleans.pdf` the paper
-- `exit_codes_are_not_booleans.tex` latex source
-- `compare.sh` a POSIX shell benchmark written in 2025, a year before the paper it corroborates
-- `tex2pdf.sh` an interactive POSIX shell utility that prompts to build the LaTeX source into a PDF using either xelatex or pdflatex, and copies the result to ~/Downloads
+- [exit_codes_are_not_booleans.pdf](./exit_codes_are_not_booleans.pdf) the paper
+- [exit_codes_are_not_booleans.tex](./exit_codes_are_not_booleans.tex) latex source
+- [compare.sh](./compare.sh) a POSIX shell benchmark written in 2025, a year before the paper it corroborates
+- [tex2pdf.sh](./tex2pdf.sh) an interactive POSIX shell utility that prompts to build the LaTeX source into a PDF using either xelatex or pdflatex, and copies the result to ~/Downloads
+- [ecnb_empirical.pdf](./ecnb_empirical.pdf) the empirical companion paper
+- [ecnb_empirical.tex](./ecnb_empirical.tex) latex source
 
 ## The Benchmark
 
-`compare.sh` was excluded from the paper deliberately. The central argument is semantic, not empirical, and a benchmark cited in its support would have invited the wrong refutation, an optimised implementation, a faster machine, a narrower margin, none of which would touch the structural claim. The script exists because the performance consequence of a category error is still a consequence, and because a reader who finds the theoretical argument unconvincing deserves the opportunity to time it themselves.
+[compare.sh](./compare.sh) was excluded from the paper deliberately. The central argument is semantic, not empirical, and a benchmark cited in its support would have invited the wrong refutation, an optimised implementation, a faster machine, a narrower margin, none of which would touch the structural claim. The script exists because the performance consequence of a category error is still a consequence, and because a reader who finds the theoretical argument unconvincing deserves the opportunity to time it themselves.
 
 Both functions compute `r=$((i % 6))` once per iteration. The arithmetic is identical. The only variable is the dispatch mechanism: `if` routes through `[ ]` and exit codes; `case` dispatches on the value directly.
 
+## The Empirical Paper
+
+[ecnb_empirical.pdf](./ecnb_empirical.pdf) is a companion to the semantic argument. It measures what the first paper declines to measure: the cost of the round trip, in nanoseconds, across three shell configurations on an ARM Cortex A53 running 32-bit Arch Linux. The result is consistent across every shell tested. `case` outperforms `if`/`[` by factors of 2.33x, 2.35x, and 3.09x. The most significant finding is directional: the faster the shell implementation, the larger the relative overhead. Optimising the shell does not close the gap. It widens it.
+
 ## License
- 
-The paper (`exit_codes_are_not_booleans.pdf`, `exit_codes_are_not_booleans.tex`) is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Ivan Gaydardzhiev, 2026.
- 
+
+The papers are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Ivan Gaydardzhiev, 2026.
+
 The software in this repository is released under [GPL-3.0-only](./COPYING).
