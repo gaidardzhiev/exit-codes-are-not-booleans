@@ -29,7 +29,7 @@ The result was 2728. If there is absolution here, it is earned only through expo
 
 ## The Benchmark
 
-[compare.sh](./compare.sh) was excluded from the paper deliberately. The central argument is semantic, not empirical, and a benchmark cited in its support would have invited the wrong refutation, an optimised implementation, a faster machine, a narrower margin, none of which would touch the structural claim. The script exists because the performance consequence of a category error is still a consequence, and because a reader who finds the theoretical argument unconvincing deserves the opportunity to time it themselves.
+[compare.sh](./compare.sh) was excluded from the main paper deliberately. The central argument is semantic, not empirical, and a benchmark cited in its support would have invited the wrong refutation, an optimised implementation, a faster machine, a narrower margin, none of which would touch the structural claim. The script exists because the performance consequence of a category error is still a consequence, and because a reader who finds the theoretical argument unconvincing deserves the opportunity to time it themselves.
 
 Both functions compute `r=$((i % 6))` once per iteration. The arithmetic is identical. The only variable is the dispatch mechanism: `if` routes through `[ ]` and exit codes; `case` dispatches on the value directly.
 
