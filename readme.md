@@ -1,6 +1,6 @@
 # Exit Codes Are Not Booleans
 
-There is an idiom so common in POSIX shell that it has stopped being visible. It appears in scripts written by careful people, in codebases maintained by experienced engineers, in tutorials written to teach correct practice. It looks like a conditional. It is not one.
+There is an idiom so common in POSIX shell that it has stopped being visible. It appears in scripts written by careful people, in codebases maintained by experienced engineers, in tutorials written to teach correct practice.
 
 `if [ condition ]` does not evaluate a boolean expression. It runs a command, waits for it to exit, and branches on the exit status. The `[` is not syntax. It is a separate utility whose sole purpose is to encode a value as an exit code so that `if` has something to consume. The value enters as an argument, crosses a process boundary, and returns as a number between zero and one. `if` then decodes that number back into a branch decision. The programmer sees a conditional. The kernel sees a command invocation.
 
